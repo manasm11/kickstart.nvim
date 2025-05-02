@@ -98,14 +98,45 @@ vim.g.have_nerd_font = false
 -- NOTE: You can change these options as you wish!
 --  For more options, you can see `:help option-list`
 
+vim.opt.autoindent = true -- Copy indent from current line when starting a new line
+vim.opt.completeopt = { 'menuone', 'longest' } -- Completion options
+vim.opt.cursorline = true -- Highlight the current line
+vim.opt.expandtab = true -- Use spaces instead of tabs
+vim.opt.mouse = 'a' -- Enable mouse support in all modes
+vim.opt.number = true -- Show line numbers
+vim.opt.relativenumber = true -- Show relative line numbers
+vim.opt.scrolloff = 999 -- Keep cursor centered vertically ('999' is a common way to ensure it)
+vim.opt.shiftwidth = 4 -- Number of spaces for indentation
+vim.opt.shortmess:append 'c' -- Don't show "match X of Y" messages, keep other messages
+vim.opt.smarttab = true -- Use tabstop/shiftwidth settings for tabs
+vim.opt.softtabstop = 4 -- Number of spaces a <Tab> counts for in editing operations
+vim.opt.spell = true -- Enable spell checking
+vim.opt.spelloptions = 'camel' -- Treat CamelCase words as separate words for spell checking
+vim.opt.tabstop = 4 -- Number of spaces a <Tab> in the file counts for
+
+-- Recommended alternative for highlighting over 80 columns (more efficient)
+-- vim.opt.colorcolumn = '81'
+
+-- ============================================================================
+-- Highlighting & Colorscheme
+-- ============================================================================
+
+-- Highlight the cursor line background
+-- Equivalent to: highlight CursorLine ctermbg=darkgray guibg=#2E3440
+vim.api.nvim_set_hl(0, 'CursorLine', { ctermbg = 'darkgray'})
+
+-- Highlight for over-length lines (used in autocmd below)
+-- Equivalent to: highlight OverLength ctermfg=Red guifg=Red
+vim.api.nvim_set_hl(0, 'OverLength', { ctermfg = 'Red'})
+
+-- Enable mouse mode, can be useful for resizing splits for example!
+vim.opt.mouse = 'a'
+
 -- Make line numbers default
 vim.opt.number = true
 -- You can also add relative line numbers, to help with jumping.
 --  Experiment for yourself to see if you like it!
 -- vim.opt.relativenumber = true
-
--- Enable mouse mode, can be useful for resizing splits for example!
-vim.opt.mouse = 'a'
 
 -- Don't show the mode, since it's already in the status line
 vim.opt.showmode = false
@@ -120,6 +151,7 @@ end)
 
 -- Enable break indent
 vim.opt.breakindent = true
+vim.opt.autoindent = true
 
 -- Save undo history
 vim.opt.undofile = true
@@ -163,6 +195,23 @@ vim.opt.confirm = true
 
 -- [[ Basic Keymaps ]]
 --  See `:help vim.keymap.set()`
+
+-- LSP Actions
+vim.keymap.set('n', '<leader>ca', vim.lsp.buf.code_action, { noremap = true, silent = true, desc = 'LSP Code Action' })
+vim.keymap.set('n', '<leader>rn', vim.lsp.buf.rename, { noremap = true, silent = true, desc = 'LSP Rename' })
+
+-- Buffer Management
+vim.keymap.set('n', '<leader>d', '<cmd>bd<CR>', { noremap = true, silent = true, desc = 'Delete Buffer' })
+vim.keymap.set('n', '<leader>n', '<cmd>bn<CR>', { noremap = true, silent = true, desc = 'Next Buffer' })
+vim.keymap.set('n', '<leader>p', '<cmd>bp<CR>', { noremap = true, silent = true, desc = 'Previous Buffer' })
+
+-- Window/Session Management
+vim.keymap.set('n', '<leader>q', '<cmd>q<CR>', { noremap = true, silent = true, desc = 'Quit' })
+vim.keymap.set('n', '<leader>w', '<cmd>w<CR><cmd>LspRestart<CR>', { noremap = true, silent = true, desc = 'Write & Restart LSP' }) -- Assumes LspRestart command exists
+vim.keymap.set('n', '<leader>x', '<cmd>x<CR>', { noremap = true, silent = true, desc = 'Save & Quit' })
+
+-- Other
+vim.keymap.set('n', '<leader>t', '<cmd>terminal<CR>', { noremap = true, silent = true, desc = 'Open Terminal' })
 
 -- Clear highlights on search when pressing <Esc> in normal mode
 --  See `:help hlsearch`
@@ -478,6 +527,7 @@ require('lazy').setup({
       'williamboman/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
 
+
       -- Useful status updates for LSP.
       { 'j-hui/fidget.nvim', opts = {} },
 
@@ -791,12 +841,12 @@ require('lazy').setup({
           -- `friendly-snippets` contains a variety of premade snippets.
           --    See the README about individual language/framework/plugin snippets:
           --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          {
+            'rafamadriz/friendly-snippets',
+            config = function()
+              require('luasnip.loaders.from_vscode').lazy_load()
+            end,
+          },
         },
         opts = {},
       },
@@ -967,7 +1017,7 @@ require('lazy').setup({
   --
   -- require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.lint',
   -- require 'kickstart.plugins.autopairs',
   -- require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps

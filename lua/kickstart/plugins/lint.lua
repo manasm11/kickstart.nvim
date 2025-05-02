@@ -6,7 +6,17 @@ return {
     config = function()
       local lint = require 'lint'
       lint.linters_by_ft = {
-        markdown = { 'markdownlint' },
+        --   clojure = { "clj-kondo" },
+        --   dockerfile = { "hadolint" },
+        go = { 'golangcilint' },
+        --   inko = { "inko" },
+        --   janet = { "janet" },
+        --   json = { "jsonlint" },
+        --   markdown = { 'markdownlint', 'vale' },
+        --   rst = { "vale" },
+        --   ruby = { "ruby" },
+        --   terraform = { "tflint" },
+        --   text = { "vale" }
       }
 
       -- To allow other plugins to add linters to require('lint').linters_by_ft,
@@ -16,18 +26,6 @@ return {
       --
       -- However, note that this will enable a set of default linters,
       -- which will cause errors unless these tools are available:
-      -- {
-      --   clojure = { "clj-kondo" },
-      --   dockerfile = { "hadolint" },
-      --   inko = { "inko" },
-      --   janet = { "janet" },
-      --   json = { "jsonlint" },
-      --   markdown = { "vale" },
-      --   rst = { "vale" },
-      --   ruby = { "ruby" },
-      --   terraform = { "tflint" },
-      --   text = { "vale" }
-      -- }
       --
       -- You can disable the default linters by setting their filetypes to nil:
       -- lint.linters_by_ft['clojure'] = nil
@@ -53,6 +51,22 @@ return {
           if vim.opt_local.modifiable:get() then
             lint.try_lint()
           end
+        end,
+      })
+      -- Make sure diagnostics are enabled and visible
+      vim.diagnostic.config {
+        virtual_text = true, -- Show error messages inline
+        signs = true, -- Show signs in the gutter
+        underline = true, -- Underline errors
+        update_in_insert = false,
+        severity_sort = true,
+      }
+      vim.o.updatetime = 250 -- Reduce update time for better responsiveness
+
+      vim.api.nvim_create_autocmd('CursorHold', {
+        pattern = '*',
+        callback = function()
+          vim.diagnostic.open_float(nil, { focusable = false, scope = 'cursor' })
         end,
       })
     end,
