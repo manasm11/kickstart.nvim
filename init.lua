@@ -123,11 +123,11 @@ vim.opt.tabstop = 4 -- Number of spaces a <Tab> in the file counts for
 
 -- Highlight the cursor line background
 -- Equivalent to: highlight CursorLine ctermbg=darkgray guibg=#2E3440
-vim.api.nvim_set_hl(0, 'CursorLine', { ctermbg = 'darkgray'})
+vim.api.nvim_set_hl(0, 'CursorLine', { ctermbg = 'darkgray' })
 
 -- Highlight for over-length lines (used in autocmd below)
 -- Equivalent to: highlight OverLength ctermfg=Red guifg=Red
-vim.api.nvim_set_hl(0, 'OverLength', { ctermfg = 'Red'})
+vim.api.nvim_set_hl(0, 'OverLength', { ctermfg = 'Red' })
 
 -- Enable mouse mode, can be useful for resizing splits for example!
 vim.opt.mouse = 'a'
@@ -288,6 +288,28 @@ vim.opt.rtp:prepend(lazypath)
 -- NOTE: Here is where you install your plugins.
 require('lazy').setup({
   -- NOTE: Plugins can be added with a link (or for a github repo: 'owner/repo' link).
+
+  -- Remove the `use` here if you're using folke/lazy.nvim.
+  {
+    'Exafunction/windsurf.vim',
+    event = 'BufEnter',
+    config = function()
+      -- Change '<C-g>' here to any keycode you like.
+      vim.keymap.set('i', '<C-g>', function()
+        return vim.fn['codeium#Accept']()
+      end, { expr = true, silent = true })
+      vim.keymap.set('i', '<c-;>', function()
+        return vim.fn['codeium#CycleCompletions'](1)
+      end, { expr = true, silent = true })
+      vim.keymap.set('i', '<c-,>', function()
+        return vim.fn['codeium#CycleCompletions'](-1)
+      end, { expr = true, silent = true })
+      vim.keymap.set('i', '<c-x>', function()
+        return vim.fn['codeium#Clear']()
+      end, { expr = true, silent = true })
+    end,
+  },
+
   'tpope/vim-sleuth', -- Detect tabstop and shiftwidth automatically
 
   -- NOTE: Plugins can also be added by using a table,
@@ -505,18 +527,6 @@ require('lazy').setup({
 
   -- LSP Plugins
   {
-    -- `lazydev` configures Lua LSP for your Neovim config, runtime and plugins
-    -- used for completion, annotations and signatures of Neovim apis
-    'folke/lazydev.nvim',
-    ft = 'lua',
-    opts = {
-      library = {
-        -- Load luvit types when the `vim.uv` word is found
-        { path = '${3rd}/luv/library', words = { 'vim%.uv' } },
-      },
-    },
-  },
-  {
     -- Main LSP Configuration
     'neovim/nvim-lspconfig',
     dependencies = {
@@ -527,14 +537,11 @@ require('lazy').setup({
       'williamboman/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
 
-
       -- Useful status updates for LSP.
       { 'j-hui/fidget.nvim', opts = {} },
-
-      -- Allows extra capabilities provided by blink.cmp
-      'saghen/blink.cmp',
     },
     config = function()
+      require('lspconfig').gopls.setup {}
       -- Brief aside: **What is LSP?**
       --
       -- LSP is an initialism you've probably heard, but might not understand what it is.
@@ -699,9 +706,7 @@ require('lazy').setup({
 
       -- LSP servers and clients are able to communicate to each other what features they support.
       --  By default, Neovim doesn't support everything that is in the LSP specification.
-      --  When you add blink.cmp, luasnip, etc. Neovim now has *more* capabilities.
-      --  So, we create new capabilities with blink.cmp, and then broadcast that to the servers.
-      local capabilities = require('blink.cmp').get_lsp_capabilities()
+      local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
       -- Enable the following language servers
       --  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
@@ -758,6 +763,7 @@ require('lazy').setup({
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
         'stylua', -- Used to format Lua code
+        'gopls', -- Used to format Go code
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -819,105 +825,110 @@ require('lazy').setup({
     },
   },
 
-  { -- Autocompletion
-    'saghen/blink.cmp',
-    event = 'VimEnter',
-    version = '1.*',
+  { -- Autocompletion Engine
+    'hrsh7th/nvim-cmp',
+    event = 'InsertEnter', -- Load when starting insert mode
     dependencies = {
-      -- Snippet Engine
+      -- Snippet Engine & Snippet Source for nvim-cmp
       {
-        'L3MON4D3/LuaSnip',
-        version = '2.*',
-        build = (function()
-          -- Build Step is needed for regex support in snippets.
-          -- This step is not supported in many windows environments.
-          -- Remove the below condition to re-enable on windows.
-          if vim.fn.has 'win32' == 1 or vim.fn.executable 'make' == 0 then
-            return
-          end
-          return 'make install_jsregexp'
-        end)(),
-        dependencies = {
-          -- `friendly-snippets` contains a variety of premade snippets.
-          --    See the README about individual language/framework/plugin snippets:
-          --    https://github.com/rafamadriz/friendly-snippets
-          {
-            'rafamadriz/friendly-snippets',
-            config = function()
-              require('luasnip.loaders.from_vscode').lazy_load()
-            end,
-          },
-        },
-        opts = {},
+        'dcampos/nvim-snippy',
+        -- Optional: If you want standard Vim snippets
+        -- dependencies = { 'honza/vim-snippets' },
       },
-      'folke/lazydev.nvim',
+      'dcampos/cmp-snippy', -- Snippy integration for cmp
+
+      -- Other sources for nvim-cmp
+      'hrsh7th/cmp-nvim-lsp', -- LSP suggestions
+      'hrsh7th/cmp-buffer', -- Buffer text suggestions
+      'hrsh7th/cmp-path', -- File path suggestions
+      'hrsh7th/cmp-cmdline', -- Optional: Command line completion
     },
-    --- @module 'blink.cmp'
-    --- @type blink.cmp.Config
-    opts = {
-      keymap = {
-        -- 'default' (recommended) for mappings similar to built-in completions
-        --   <c-y> to accept ([y]es) the completion.
-        --    This will auto-import if your LSP supports it.
-        --    This will expand snippets if the LSP sent a snippet.
-        -- 'super-tab' for tab to accept
-        -- 'enter' for enter to accept
-        -- 'none' for no mappings
-        --
-        -- For an understanding of why the 'default' preset is recommended,
-        -- you will need to read `:help ins-completion`
-        --
-        -- No, but seriously. Please read `:help ins-completion`, it is really good!
-        --
-        -- All presets have the following mappings:
-        -- <tab>/<s-tab>: move to right/left of your snippet expansion
-        -- <c-space>: Open menu or open docs if already open
-        -- <c-n>/<c-p> or <up>/<down>: Select next/previous item
-        -- <c-e>: Hide menu
-        -- <c-k>: Toggle signature help
-        --
-        -- See :h blink-cmp-config-keymap for defining your own keymap
-        preset = 'default',
+    config = function()
+      local cmp = require 'cmp'
+      local snippy = require 'snippy'
 
-        -- For more advanced Luasnip keymaps (e.g. selecting choice nodes, expansion) see:
-        --    https://github.com/L3MON4D3/LuaSnip?tab=readme-ov-file#keymaps
-      },
-
-      appearance = {
-        -- 'mono' (default) for 'Nerd Font Mono' or 'normal' for 'Nerd Font'
-        -- Adjusts spacing to ensure icons are aligned
-        nerd_font_variant = 'mono',
-      },
-
-      completion = {
-        -- By default, you may press `<c-space>` to show the documentation.
-        -- Optionally, set `auto_show = true` to show the documentation after a delay.
-        documentation = { auto_show = false, auto_show_delay_ms = 500 },
-      },
-
-      sources = {
-        default = { 'lsp', 'path', 'snippets', 'lazydev' },
-        providers = {
-          lazydev = { module = 'lazydev.integrations.blink', score_offset = 100 },
+      cmp.setup {
+        snippet = {
+          -- REQUIRED! Tell nvim-cmp how to expand snippets
+          expand = function(args)
+            snippy.expand_snippet(args.body)
+          end,
         },
-      },
+        window = {
+          completion = cmp.config.window.bordered(),
+          documentation = cmp.config.window.bordered(),
+        },
+        mapping = cmp.mapping.preset.insert {
+          ['<C-b>'] = cmp.mapping.scroll_docs(-4),
+          ['<C-f>'] = cmp.mapping.scroll_docs(4),
+          ['<C-Space>'] = cmp.mapping.complete(), -- Trigger completion
+          ['<C-e>'] = cmp.mapping.abort(), -- Close completion
+          ['<CR>'] = cmp.mapping.confirm { select = true }, -- Confirm selection with Enter
 
-      snippets = { preset = 'luasnip' },
+          -- Tab completion / Snippet Navigation
+          ['<Tab>'] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.select_next_item() -- Select next item if completion menu is visible
+            elseif snippy.can_expand_or_advance() then
+              snippy.expand_or_advance() -- Expand or jump to next placeholder
+            -- elseif require('luasnip').expand_or_jumpable() then -- Uncomment if also using LuaSnip
+            --   require('luasnip').expand_or_jump()
+            else
+              fallback() -- Fallback to default Tab behavior
+            end
+          end, { 'i', 's' }), -- Run in Insert and Select modes
 
-      -- Blink.cmp includes an optional, recommended rust fuzzy matcher,
-      -- which automatically downloads a prebuilt binary when enabled.
-      --
-      -- By default, we use the Lua implementation instead, but you may enable
-      -- the rust implementation via `'prefer_rust_with_warning'`
-      --
-      -- See :h blink-cmp-config-fuzzy for more information
-      fuzzy = { implementation = 'lua' },
+          ['<S-Tab>'] = cmp.mapping(function(fallback)
+            if cmp.visible() then
+              cmp.select_prev_item() -- Select previous item if completion menu is visible
+            elseif snippy.can_jump(-1) then
+              snippy.previous() -- Jump to previous placeholder
+            -- elseif require('luasnip').jumpable(-1) then -- Uncomment if also using LuaSnip
+            --   require('luasnip').jump(-1)
+            else
+              fallback() -- Fallback to default Shift-Tab behavior
+            end
+          end, { 'i', 's' }), -- Run in Insert and Select modes
+        },
+        -- Order of sources matters!
+        sources = cmp.config.sources {
+          { name = 'nvim_lsp' },
+          { name = 'snippy' }, -- Source for snippy snippets
+          -- { name = 'luasnip' }, -- Add if you also want to use LuaSnip alongside snippy
+          { name = 'buffer' },
+          { name = 'path' },
+        },
+      }
 
-      -- Shows a signature help window while you type arguments for a function
-      signature = { enabled = true },
-    },
+      -- Optional: Setup command line completion (requires hrsh7th/cmp-cmdline)
+      cmp.setup.cmdline('/', {
+        mapping = cmp.mapping.preset.cmdline(),
+        sources = {
+          { name = 'buffer' },
+        },
+      })
+      cmp.setup.cmdline(':', {
+        mapping = cmp.mapping.preset.cmdline(),
+        sources = cmp.config.sources({
+          { name = 'path' },
+        }, {
+          { name = 'cmdline' },
+        }),
+      })
+
+      -- Optional: Configure nvim-snippy further if needed
+      require('snippy').setup {
+        -- mappings = { ... } -- You can customize snippy mappings here if needed
+      }
+    end,
   },
 
+  -- You might already have this if you kept it for other plugins
+  { 'nvim-lua/plenary.nvim', lazy = true },
+
+  -- Make sure lazydev is still included if other plugins need it,
+  -- otherwise remove its entry if it was only for blink.cmp
+  -- { 'folke/lazydev.nvim', ft = 'lua', opts = { ... } },
   { -- You can easily change to a different colorscheme.
     -- Change the name of the colorscheme plugin below, and then
     -- change the command in the config to whatever the name of that colorscheme is.
@@ -986,7 +997,7 @@ require('lazy').setup({
     main = 'nvim-treesitter.configs', -- Sets main module to use for opts
     -- [[ Configure Treesitter ]] See `:help nvim-treesitter`
     opts = {
-      ensure_installed = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
+      ensure_installed = { 'bash', 'c', 'diff', 'go', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' },
       -- Autoinstall languages that are not installed
       auto_install = true,
       highlight = {
@@ -1015,12 +1026,12 @@ require('lazy').setup({
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
   --
-  -- require 'kickstart.plugins.debug',
+  require 'kickstart.plugins.debug',
   -- require 'kickstart.plugins.indent_line',
   require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
-  -- require 'kickstart.plugins.neo-tree',
-  -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
+  require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.neo-tree',
+  require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
